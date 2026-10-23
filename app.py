@@ -517,15 +517,15 @@ elif menu == "Cetak Stiker QR Code":
             # Format teks di dalam QR Code persis seperti stiker fisik (Mitutoyo)
             
             qr_text = f"""CALIBRATION REMINDER
-----------------------------------------------------------
-Nama Alat               : {row_data.get('Nama_Alat', '-')}
-Merk                    : {row_data.get('Merk', '-')}
-No. Seri                : {row_data.get('No_Seri', '-')}
-No. Reg                 : {row_data.get('Nomor_Register', pilih_alat)}
-Rentang Pemakaian       : {row_data.get('Rentang Pemakaian', '-')}
-Equipment Range         : {row_data.get('Equipment_Range', '-')}
-Next Calibration        : {row_data.get('Expired_Calibration', '-')}
-----------------------------------------------------------
+----------------------------
+Nama Alat		: {row_data.get('Nama_Alat', '-')}
+Merk			: {row_data.get('Merk', '-')}
+No. Seri		: {row_data.get('No_Seri', '-')}
+No. Reg			: {row_data.get('Nomor_Register', pilih_alat)}
+Rentang Pemakaian	: {row_data.get('Rentang Pemakaian', '-')}
+Equipment Range		: {row_data.get('Equipment_Range', '-')}
+Calibration Date	: {row_data.get('Expired_Calibration', '-')}
+----------------------------
 PT ARGAPURA - JIDOKA SYSTEM"""
 
             # Generate QR Code dari teks berformat stiker fisik
