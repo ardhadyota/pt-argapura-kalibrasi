@@ -521,9 +521,9 @@ elif menu == "Cetak Stiker QR Code":
 Nama Alat               : {row_data.get('Nama_Alat', '-')}
 Merk                    : {row_data.get('Merk', '-')}
 No. Seri                : {row_data.get('No_Seri', '-')}
-No. Reg                : {row_data.get('Nomor_Register', pilih_alat)}
-Rentang Pemakaian        : {row_data.get('Rentang Pemakaian', '-')}
-Equipment Range        : {row_data.get('Equipment_Range', '-')}
+No. Reg                 : {row_data.get('Nomor_Register', pilih_alat)}
+Rentang Pemakaian       : {row_data.get('Rentang Pemakaian', '-')}
+Equipment Range         : {row_data.get('Equipment_Range', '-')}
 Next Calibration        : {row_data.get('Expired_Calibration', '-')}
 ----------------------------
 PT ARGAPURA - JIDOKA SYSTEM"""
