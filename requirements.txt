@@ -2,3 +2,5 @@ streamlit
 pandas
 qrcode
 pillow
+openpyxl
+streamlit-qrcode-scanner
