@@ -6,18 +6,18 @@ import pandas as pd
 from datetime import datetime
 import streamlit as st
 from streamlit_qrcode_scanner import qrcode_scanner
-#---------------------------------------------------------#
+#---------------------------------------------------------
 1. KONFIGURASI HALAMAN & LAYOUT UTAMA
-#---------------------------------------------------------#
+#---------------------------------------------------------
 st.set_page_config(
 page_title="PT ARGAPURA - Jidoka Calibration System",
 page_icon="🏭",
 layout="wide",
 initial_sidebar_state="expanded"
 )
-#---------------------------------------------------------#
+#---------------------------------------------------------
 2. ADVANCED ENTERPRISE CSS STYLING
-#---------------------------------------------------------#
+#---------------------------------------------------------
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -196,9 +196,9 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-#---------------------------------------------------------#
+#---------------------------------------------------------
 3. BACKEND DATA FETCHING & PROCESSOR
-#---------------------------------------------------------#
+#---------------------------------------------------------
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSN3SuNIyQRzHXo9cRWOXQ72eLoGD_iY5Ays3nCDaw5C_3QAkyIR2_dOcMMPTaqZDTJR5ujZNmRVUXR/pub?gid=646903180&single=true&output=csv"
 @st.cache_data(ttl=0)
 def load_data(url):
@@ -269,9 +269,9 @@ st.session_state['kaizen_logs'] = pd.DataFrame(columns=[
 'Nomor_Register', 'Why1', 'Why2', 'Why3', 'Why4', 'Why5_Akar',
 'Countermeasure', 'PIC', 'Kategori_Akar', 'Target_Selesai', 'Tanggal_Input'
 ])
-#---------------------------------------------------------#
+#---------------------------------------------------------
 4. SIDEBAR NAVIGATION DESIGN
-#---------------------------------------------------------#
+#---------------------------------------------------------
 with st.sidebar:
 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
     # Centered Logo Wrapper
@@ -311,18 +311,18 @@ st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
         </div>
     """, unsafe_allow_html=True)
 
-#---------------------------------------------------------#
+#---------------------------------------------------------
 5. HERO HEADER DASHBOARD
-#---------------------------------------------------------#
+#---------------------------------------------------------
 st.markdown("""
 <div class="hero-banner">
 <div class="hero-title">PT ARGAPURA — CONTROL CENTER</div>
 <div class="hero-subtitle">Sistem Terintegrasi untuk Monitoring Kalibrasi Alat Ukur, Pengelolaan Vendor JIT, dan Inspeksi Gemba secara Real-Time</div>
 </div>
 """, unsafe_allow_html=True)
-#---------------------------------------------------------#
+#---------------------------------------------------------
 MENU 1: DASHBOARD MONITORING (WITH LINE FILTER)
-#---------------------------------------------------------#
+#---------------------------------------------------------
 if menu == "Dashboard Monitoring":
 # 1. PPDCA Framework Header
 st.markdown("""
