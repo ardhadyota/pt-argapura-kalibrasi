@@ -6,21 +6,24 @@ import pandas as pd
 from datetime import datetime
 import streamlit as st
 from streamlit_qrcode_scanner import qrcode_scanner
-#---------------------------------------------------------
-1. KONFIGURASI HALAMAN & LAYOUT UTAMA
-#---------------------------------------------------------
+
+# ---------------------------------------------------------
+# 1. KONFIGURASI HALAMAN & LAYOUT UTAMA
+# ---------------------------------------------------------
 st.set_page_config(
-page_title="PT ARGAPURA - Jidoka Calibration System",
-page_icon="🏭",
-layout="wide",
-initial_sidebar_state="expanded"
+    page_title="PT ARGAPURA - Jidoka Calibration System",
+    page_icon="🏭",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
-#---------------------------------------------------------
-2. ADVANCED ENTERPRISE CSS STYLING
-#---------------------------------------------------------
+
+# ---------------------------------------------------------
+# 2. ADVANCED ENTERPRISE CSS STYLING
+# ---------------------------------------------------------
 st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
     /* Global Reset & Font Family */
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -196,26 +199,27 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-#---------------------------------------------------------
-3. BACKEND DATA FETCHING & PROCESSOR
-#---------------------------------------------------------
+
+# ---------------------------------------------------------
+# 3. BACKEND DATA FETCHING & PROCESSOR
+# ---------------------------------------------------------
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSN3SuNIyQRzHXo9cRWOXQ72eLoGD_iY5Ays3nCDaw5C_3QAkyIR2_dOcMMPTaqZDTJR5ujZNmRVUXR/pub?gid=646903180&single=true&output=csv"
+
 @st.cache_data(ttl=0)
 def load_data(url):
-headers = {'User-Agent': 'Mozilla/5.0'}
-response = requests.get(url, headers=headers, timeout=10)
-lines = response.text.splitlines()
-header_idx = next((i for i, line in enumerate(lines) if "Nomor Register" in line or "Nama Alat" in line), 4)
-clean_csv = "\n".join(lines[header_idx:])
-df = pd.read_csv(io.StringIO(clean_csv), on_bad_lines='skip')
-df.columns = [str(col).strip() for col in df.columns]
-    reg_col = next((c for c in df.columns if "Register" in c), df.columns[1] if len(df.columns) > 1 else df.columns[0])
-    exp_col = next((c for c in df.columns if "Expired" in c or "2027" in c or "Calibration" in c), df.columns[-1])
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    response = requests.get(url, headers=headers, timeout=10)
+    lines = response.text.splitlines()
+    header_idx = next((i for i, line in enumerate(lines) if "Nomor Register" in line or "Nama Alat" in line), 4)
+    clean_csv = "\n".join(lines[header_idx:])
+    df = pd.read_csv(io.StringIO(clean_csv), on_bad_lines='skip')
+    df.columns = [str(col).strip() for col in df.columns]
+    
+    reg_col = next((c for c in df.columns if "Register" in c), df.columns[1])
+    exp_col = next((c for c in df.columns if "Expired" in c or "2027" in c), df.columns[-1])
     
     df['Nomor_Register'] = df[reg_col].fillna("").astype(str)
     df['Expired_Calibration'] = df[exp_col].fillna("").astype(str)
-    
-    # Standardize spaces for robust querying
     df = df[df['Nomor_Register'].str.contains("AGP|AUP|AUL|AUW", case=False, na=False)]
     
     df['Expired_Date'] = pd.to_datetime(df['Expired_Calibration'], format='%d-%b-%y', errors='coerce')
@@ -225,31 +229,20 @@ df.columns = [str(col).strip() for col in df.columns]
         
     return df
 
-def get_field_val(row_data, possible_names, col_fallback_idx=None):
-"""Helper to match column names flexibly across inconsistent spreadsheet headers."""
-def clean_str(v):
-return str(v).replace(" ", "").replace("_", "").strip().lower()
-    # Match by header name
-    for p_name in possible_names:
-        target = clean_str(p_name)
-        for col in row_data.index:
-            if target in clean_str(col):
-                val = str(row_data[col]).strip()
-                if val and val.lower() != "nan":
-                    return val
-
-    # Match by column index fallback if name not matched
-    if col_fallback_idx is not None and col_fallback_idx < len(row_data):
-        val = str(row_data.iloc[col_fallback_idx]).strip()
-        if val and val.lower() != "nan":
-            return val
-            
-    return "-"
+def generate_qr(text):
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
+    qr.add_data(text)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
 
 try:
-data = load_data(SHEET_URL)
-today = pd.Timestamp(datetime.now().date())
-data['Sisa_Hari'] = (data['Expired_Date'] - today).dt.days
+    data = load_data(SHEET_URL)
+    today = pd.Timestamp(datetime.now().date())
+    data['Sisa_Hari'] = (data['Expired_Date'] - today).dt.days
+    
     status_list = []
     for sisa in data['Sisa_Hari']:
         if pd.isna(sisa):
@@ -261,19 +254,24 @@ data['Sisa_Hari'] = (data['Expired_Date'] - today).dt.days
         else:
             status_list.append("OK (Safe)")
     data['Status_Monitoring'] = status_list
-except Exception as e:
-data = pd.DataFrame()
-Persistent State for Kaizen Data
+except Exception:
+    data = pd.DataFrame()
+
+
+
+# Persistent State for Kaizen Data
 if 'kaizen_logs' not in st.session_state:
-st.session_state['kaizen_logs'] = pd.DataFrame(columns=[
-'Nomor_Register', 'Why1', 'Why2', 'Why3', 'Why4', 'Why5_Akar',
-'Countermeasure', 'PIC', 'Kategori_Akar', 'Target_Selesai', 'Tanggal_Input'
-])
-#---------------------------------------------------------
-4. SIDEBAR NAVIGATION DESIGN
-#---------------------------------------------------------
+    st.session_state['kaizen_logs'] = pd.DataFrame(columns=[
+        'Nomor_Register', 'Why1', 'Why2', 'Why3', 'Why4', 'Why5_Akar', 
+        'Countermeasure', 'PIC', 'Kategori_Akar', 'Target_Selesai', 'Tanggal_Input'
+    ])
+
+# ---------------------------------------------------------
+# 4. SIDEBAR NAVIGATION DESIGN
+# ---------------------------------------------------------
 with st.sidebar:
-st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+    
     # Centered Logo Wrapper
     col_l, col_logo, col_r = st.columns([1, 2, 1])
     with col_logo:
@@ -311,28 +309,30 @@ st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
         </div>
     """, unsafe_allow_html=True)
 
-#---------------------------------------------------------
-5. HERO HEADER DASHBOARD
-#---------------------------------------------------------
+# ---------------------------------------------------------
+# 5. HERO HEADER DASHBOARD
+# ---------------------------------------------------------
 st.markdown("""
-<div class="hero-banner">
-<div class="hero-title">PT ARGAPURA — CONTROL CENTER</div>
-<div class="hero-subtitle">Sistem Terintegrasi untuk Monitoring Kalibrasi Alat Ukur, Pengelolaan Vendor JIT, dan Inspeksi Gemba secara Real-Time</div>
-</div>
+    <div class="hero-banner">
+        <div class="hero-title">PT ARGAPURA — CONTROL CENTER</div>
+        <div class="hero-subtitle">Sistem Terintegrasi untuk Monitoring Kalibrasi Alat Ukur, Pengelolaan Vendor JIT, dan Inspeksi Gemba secara Real-Time</div>
+    </div>
 """, unsafe_allow_html=True)
-#---------------------------------------------------------
-MENU 1: DASHBOARD MONITORING (WITH LINE FILTER)
-#---------------------------------------------------------
+
+# ---------------------------------------------------------
+# MENU 1: DASHBOARD MONITORING (WITH LINE FILTER)
+# ---------------------------------------------------------
 if menu == "Dashboard Monitoring":
-# 1. PPDCA Framework Header
-st.markdown("""
-<div class="ppdca-grid">
-<div class="ppdca-box"><div class="ppdca-tag">1. Plan (Perencanaan)</div><div class="ppdca-text">Jadwal Kalibrasi Digital & Peringatan Jatuh Tempo ≤45 hari.</div></div>
-<div class="ppdca-box"><div class="ppdca-tag">2. Do (Pelaksanaan)</div><div class="ppdca-text">Sinkronisasi Google Sheets & Bot WA Fonnte.</div></div>
-<div class="ppdca-box"><div class="ppdca-tag">3. Check (Pengawasan)</div><div class="ppdca-text">Andon Board visual Merah, Kuning, Hijau.</div></div>
-<div class="ppdca-box"><div class="ppdca-tag">4. Act (Jidoka)</div><div class="ppdca-text">Notifikasi otomatis & 5-Why Analysis.</div></div>
-</div>
-""", unsafe_allow_html=True)
+    # 1. PPDCA Framework Header
+    st.markdown("""
+        <div class="ppdca-grid">
+            <div class="ppdca-box"><div class="ppdca-tag">1. Plan (Perencanaan)</div><div class="ppdca-text">Jadwal Kalibrasi Digital & PeringatanJatuh Tempo ≤45 hari.</div></div>
+            <div class="ppdca-box"><div class="ppdca-tag">2. Do (Pelaksanaan)</div><div class="ppdca-text">Sinkronisasi Google Sheets & Bot WA Fonnte.</div></div>
+            <div class="ppdca-box"><div class="ppdca-tag">3. Check (Pengawasan)</div><div class="ppdca-text">Andon Board visual Merah, Kuning, Hijau.</div></div>
+            <div class="ppdca-box"><div class="ppdca-tag">4. Act (Jidoka)</div><div class="ppdca-text">Notifikasi otomatis & 5-Why Analysis.</div></div>
+        </div>
+    """, unsafe_allow_html=True)
+
     if not data.empty:
         # ---------------------------------------------------------
         # STYLING CUSTOM ANDON CARDS (EYE-CATCHING)
@@ -431,7 +431,7 @@ st.markdown("""
         # ---------------------------------------------------------
         # BAGIAN 2: FILTER AREA LINE & JUMLAH ALAT TERKALIBRASI PER LINE
         # ---------------------------------------------------------
-        loc_col = next((c for c in data.columns if any(k in c.lower() for k in ["lokasi", "line", "area", "pic", "user"])), None)
+        loc_col = next((c for c in data.columns if "Lokasi" in c or "PIC" in c or "Line" in c), None)
         
         st.subheader("Analisis Spesifik Per Area Line")
         
@@ -439,7 +439,7 @@ st.markdown("""
         
         with col_select:
             if loc_col:
-                daftar_line = ["Semua Line / Lokasi"] + sorted(list(data[loc_col].dropna().astype(str).unique()))
+                daftar_line = ["Semua Line / Lokasi"] + sorted(list(data[loc_col].dropna().unique()))
                 pilih_line = st.selectbox("🏭 Pilih Line / Lokasi Alat Ukur:", daftar_line)
             else:
                 pilih_line = "Semua Line / Lokasi"
@@ -447,7 +447,7 @@ st.markdown("""
         # Saring Data Berdasarkan Line Yang Dipilih
         data_filtered_line = data.copy()
         if pilih_line != "Semua Line / Lokasi" and loc_col:
-            data_filtered_line = data_filtered_line[data_filtered_line[loc_col].astype(str) == pilih_line]
+            data_filtered_line = data_filtered_line[data_filtered_line[loc_col] == pilih_line]
             
         # Hitung Status Alat Khusus di Line Tersebut
         line_merah = len(data_filtered_line[data_filtered_line['Status_Monitoring'].str.contains("EXPIRED", na=False)])
@@ -481,23 +481,21 @@ st.markdown("""
             filtered_df = filtered_df[filtered_df['Status_Monitoring'].str.contains("OK", na=False)]
             
         st.dataframe(filtered_df, use_container_width=True, hide_index=True)
-    else:
-        st.warning("⚠️ Data tidak dapat dimuat dari Google Spreadsheet. Mohon periksa koneksi internet atau link spreadsheet.")
+
 
 elif menu == "Genchi Genbutsu (Scan QR)":
-st.subheader("Genchi Genbutsu (Gemba Walk & Mobile Inspection)")
-st.info("Arahkan kamera HP ke stiker QR Code yang tertempel di fisik alat ukur.")
+    st.subheader("Genchi Genbutsu (Gemba Walk & Mobile Inspection)")
+    st.info("Arahkan kamera HP ke stiker QR Code yang tertempel di fisik alat ukur.")
+    
     qr_code_val = qrcode_scanner(key="gemba_scanner_pro")
     if qr_code_val:
         st.success(f"✅ QR Code Terdeteksi: **{qr_code_val}**")
         if not data.empty:
-            clean_search = str(qr_code_val).replace(" ", "").strip().upper()
-            matched = data[data['Nomor_Register'].apply(lambda x: str(x).replace(" ", "").strip().upper()) == clean_search]
+            matched = data[data['Nomor_Register'].str.upper() == str(qr_code_val).strip().upper()]
             if not matched.empty:
                 row = matched.iloc[0]
-                nama_alat_val = get_field_val(row, ["Nama Alat", "Nama_Alat", "Equipment"], 2)
                 st.markdown("---")
-                st.subheader(f"📌 Detail Alat: {nama_alat_val}")
+                st.subheader(f"📌 Detail Alat: {row.get('Nama Alat', row.get('Nama_Alat', 'Alat Ukur'))}")
                 col1, col2, col3 = st.columns(3)
                 col1.metric("Nomor Register", row['Nomor_Register'])
                 col2.metric("Expired Date", row['Expired_Calibration'])
@@ -506,72 +504,59 @@ st.info("Arahkan kamera HP ke stiker QR Code yang tertempel di fisik alat ukur."
                 st.warning("⚠️ Data alat tidak ditemukan dalam database.")
 
 elif menu == "Cetak Stiker QR Code":
-st.subheader("🖨️ Cetak Stiker QR Code Alat Ukur")
-st.write("Gunakan fitur ini untuk mengunduh stiker QR Code berformat Calibration Reminder untuk ditempel di fisik alat ukur.")
-    if not data.empty and 'Nomor_Register' in data.columns:
-        pilih_alat = st.selectbox("Pilih Nomor Register Alat:", data['Nomor_Register'].dropna().unique())
+    st.subheader("🖨️ Cetak Stiker QR Code Alat Ukur")
+    st.write("Gunakan fitur ini untuk mengunduh stiker QR Code berformat Calibration Reminder untuk ditempel di fisik alat ukur.")
+    
+    if not data.empty:
+        pilih_alat = st.selectbox("Pilih Nomor Register Alat:", data['Nomor_Register'].unique())
         
         if pilih_alat:
-            # Flexible filtering ignoring spaces
-            def clean_str(val):
-                return str(val).replace(" ", "").strip().lower()
-
-            row = data[data['Nomor_Register'].apply(clean_str) == clean_str(pilih_alat)]
+            # Ambil detail baris data alat yang dipilih
+            row_data = data[data['Nomor_Register'] == pilih_alat].iloc[0]
             
-            if not row.empty:
-                row_data = row.iloc[0]
-                
-                # Fetch field values robustly via helper
-                nama_alat = get_field_val(row_data, ["Nama Alat", "Nama_Alat", "Equipment"], 2)
-                merk = get_field_val(row_data, ["Merk", "Brand", "Maker"], 3)
-                no_seri = get_field_val(row_data, ["No Seri", "No_Seri", "Serial"], 4)
-                rentang = get_field_val(row_data, ["Rentang Pemakaian", "Rentang_Pemakaian"], 6)
-                eq_range = get_field_val(row_data, ["Equipment Range", "Equipment_Range"], 5)
-                cal_date = get_field_val(row_data, ["Expired_Calibration", "Calibration Date", "Last_Calibration_SD", "Next Calibration"], 12)
-                
-                # Format text matching physical sticker template
-                qr_text = f"""CALIBRATION REMINDER
----
-Nama Alat        : {nama_alat}
-Merk             : {merk}
-No. Seri         : {no_seri}
-No. Reg          : {pilih_alat}
-Rentang Pemakaian: {rentang}
-Equipment Range  : {eq_range}
-Calibration Date : {cal_date}
+            # Format teks di dalam QR Code persis seperti stiker fisik (Mitutoyo)
+            
+            qr_text = f"""CALIBRATION REMINDER
+----------------------------
+Nama Alat		: {row_data.get('Nama_Alat', '-')}
+Merk			: {row_data.get('Merk', '-')}
+No. Seri		: {row_data.get('No_Seri', '-')}
+No. Reg			: {row_data.get('Nomor_Register', pilih_alat)}
+Rentang Pemakaian	: {row_data.get('Rentang Pemakaian', '-')}
+Equipment Range		: {row_data.get('Equipment_Range', '-')}
+Calibration Date	: {row_data.get('Expired_Calibration', '-')}
+----------------------------
 PT ARGAPURA - JIDOKA SYSTEM"""
-                # Generate QR Code image safely
-                qr = qrcode.QRCode(
-                    version=1,
-                    error_correction=qrcode.constants.ERROR_CORRECT_M,
-                    box_size=10,
-                    border=2,
-                )
-                qr.add_data(pilih_alat)
-                qr.make(fit=True)
-                
-                img = qr.make_image(fill_color="black", back_color="white")
-                buf = io.BytesIO()
-                img.save(buf, format="PNG")
-                qr_bytes = buf.getvalue()
 
-                col_img, col_btn = st.columns([1, 2])
-                with col_img:
-                    st.image(qr_bytes, caption=f"QR Code: {pilih_alat}", width=180)
-                with col_btn:
-                    st.markdown("**Informasi Barcode:**")
-                    st.code(qr_text, language="text")
-                    st.download_button("Unduh QR Code (.PNG)", qr_bytes, file_name=f"QR_{pilih_alat}.png", mime="image/png")
-            else:
-                st.warning("⚠️ Detail data alat tidak ditemukan.")
-    else:
-        st.error("⚠️ Data inventaris kosong atau gagal terisi.")
+            # Generate QR Code dari teks berformat stiker fisik
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_M,
+                box_size=10,
+                border=2,
+            )
+            qr.add_data(qr_text)
+            qr.make(fit=True)
+            
+            img = qr.make_image(fill_color="black", back_color="white")
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            qr_bytes = buf.getvalue()
+
+            col_img, col_btn = st.columns([1, 2])
+            with col_img:
+                st.image(qr_bytes, caption=f"QR Code: {pilih_alat}", width=180)
+            with col_btn:
+                st.markdown("**Informasi Barcode:**")
+                st.code(qr_text, language="text")
+                st.download_button("Unduh QR Code (.PNG)", qr_bytes, file_name=f"QR_{pilih_alat}.png", mime="image/png")
 
 elif menu == "JIT & Vendor Management":
-st.subheader("Just-In-Time (JIT) Tracking & Vendor Lead Time")
-if not data.empty:
-if 'Status_JIT' not in data.columns:
-data['Status_JIT'] = "In Use"
+    st.subheader("Just-In-Time (JIT) Tracking & Vendor Lead Time")
+    if not data.empty:
+        if 'Status_JIT' not in data.columns:
+            data['Status_JIT'] = "In Use"
+            
         col_j1, col_j2, col_j3, col_j4, col_j5 = st.columns(5)
         col_j1.metric("🟢 In Use", len(data[data['Status_JIT'] == "In Use"]))
         col_j2.metric("🟡 Preparing", len(data[data['Status_JIT'] == "Preparing for Cal"]))
@@ -580,8 +565,9 @@ data['Status_JIT'] = "In Use"
         col_j5.metric("✅ Returned & Verified", len(data[data['Status_JIT'] == "Returned & Verified"]))
 
 elif menu == "Kaizen & 5-Why Analysis":
-st.subheader("Kaizen & Root Cause Analysis (5-Why)")
-tab_form, tab_report = st.tabs(["📝 Form Analisis 5-Why", "📊 Laporan & Trend Kaizen"])
+    st.subheader("Kaizen & Root Cause Analysis (5-Why)")
+    tab_form, tab_report = st.tabs(["📝 Form Analisis 5-Why", "📊 Laporan & Trend Kaizen"])
+    
     with tab_form:
         if not data.empty:
             data_expired = data[data['Status_Monitoring'].str.contains("EXPIRED", na=False)]
@@ -599,10 +585,8 @@ tab_form, tab_report = st.tabs(["📝 Form Analisis 5-Why", "📊 Laporan & Tren
                         data_expired['Nomor_Register'].unique()
                     )
                     
-                    detail_row = data_expired[data_expired['Nomor_Register'] == pilih_expired].iloc[0]
-                    nama_alat_exp = get_field_val(detail_row, ["Nama Alat", "Nama_Alat", "Equipment"], 2)
-                    
-                    st.info(f"📌 **Detail Alat Selected**: {nama_alat_exp} | **Status**: {detail_row['Status_Monitoring']}")
+                    detail_alat = data_expired[data_expired['Nomor_Register'] == pilih_expired].iloc[0]
+                    st.info(f"📌 **Detail Alat Selected**: {detail_alat.get('Nama Alat', detail_alat.get('Nama_Alat', 'Alat Ukur'))} | **Status**: {detail_alat['Status_Monitoring']}")
                     
                     st.divider()
                     
@@ -664,8 +648,7 @@ tab_form, tab_report = st.tabs(["📝 Form Analisis 5-Why", "📊 Laporan & Tren
                                 st.warning("⚠️ Tersimpan di dashboard, namun gagal terhubung ke Google Sheets.")
                         except Exception as e:
                             st.success(f"✅ Analisis tersimpan lokal di Dashboard.")
-            else:
-                st.success("🎉 Tidak ada alat ukur yang berstatus EXPIRED. Semua alat dalam kondisi terkalibrasi!")
+                
     with tab_report:
         st.markdown("### 📊 Laporan Record Analisis Akar Masalah")
         logs_df = st.session_state['kaizen_logs']
@@ -681,7 +664,7 @@ tab_form, tab_report = st.tabs(["📝 Form Analisis 5-Why", "📊 Laporan & Tren
             st.info("ℹ️ Belum ada inputan analisis 5-Why. Laporan akan terupdate otomatis setelah mengisi Form 5-Why di tab sebelah.")
 
 elif menu == "Notifikasi":
-st.subheader("Notifikasi WhatsApp")
-st.text_input("Fonnte API Token:", value="C133Jd1Aiba7EaWvxmrE", type="password")
-st.text_input("Target Group ID / Nomor PIC:")
-st.button("Send")
+    st.subheader("Notifikasi WhatsApp")
+    st.text_input("Fonnte API Token:", value="C133Jd1Aiba7EaWvxmrE", type="password")
+    st.text_input("Target Group ID / Nomor PIC:")
+    st.button("Send")
