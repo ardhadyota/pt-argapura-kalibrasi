@@ -629,15 +629,15 @@ PT ARGAPURA - JIDOKA SYSTEM"""
                 
     return "-"
 
-            nama_alat = get_val(["Nama_Alat", "Nama Alat"])
-            merk = get_val(["Merk"])
-            no_seri = get_val(["No_Seri", "No Seri"])
-            rentang = get_val(["Rentang Pemakaian", "Rentang_Pemakaian"])
-            eq_range = get_val(["Equipment_Range", "Equipment Range"])
-            cal_date = get_val(["Expired_Calibration", "Calibration Date", "Last_Calibration_SD", "Next Calibration"])
+nama_alat = get_val(["Nama_Alat", "Nama Alat"])
+merk = get_val(["Merk"])
+no_seri = get_val(["No_Seri", "No Seri"])
+rentang = get_val(["Rentang Pemakaian", "Rentang_Pemakaian"])
+eq_range = get_val(["Equipment_Range", "Equipment Range"])
+cal_date = get_val(["Expired_Calibration", "Calibration Date", "Last_Calibration_SD", "Next Calibration"])
 
-            # Format teks di dalam QR Code persis seperti stiker fisik (Mitutoyo)
-            qr_text = f"""CALIBRATION REMINDER
+# Format teks di dalam QR Code persis seperti stiker fisik (Mitutoyo)
+qr_text = f"""CALIBRATION REMINDER
 ----------------------------------
 Nama Alat        : {nama_alat}
 Merk             : {merk}
