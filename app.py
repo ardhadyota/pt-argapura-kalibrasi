@@ -505,32 +505,128 @@ elif menu == "Genchi Genbutsu (Scan QR)":
                 col3.metric("Status Monitoring", row['Status_Monitoring'])
             else:
                 st.warning("⚠️ Data alat tidak ditemukan dalam database.")
+
 elif menu == "Cetak Stiker QR Code":
     st.subheader("🖨️ Cetak Stiker QR Code Alat Ukur")
-    st.write("Gunakan fitur ini untuk mengunduh stiker QR Code berformat Calibration Reminder untuk ditempel di fisik alat ukur.")
+    st.write(
+        "Gunakan fitur ini untuk mengunduh stiker QR Code berformat Calibration"
+        " Reminder untuk ditempel di fisik alat ukur."
+    )
 
-    if not data.empty and "Nomor_Register" in data.columns:
-        pilih_alat = st.selectbox("Pilih Nomor Register Alat:", data["Nomor_Register"].dropna().unique())
+    # Deteksi dataframe yang aktif (df atau data)
+    df_active = data if "data" in locals() and not data.empty else df
 
-        # 1. Normalkan format teks (hapus semua spasi) agar pencocokan 100% presisi
-        def clean_str(val):
-            return str(val).replace(" ", "").strip().lower()
+    if not df_active.empty:
+        # Cari nama kolom yang menampung Nomor Register secara otomatis
+        reg_col = None
+        for col in df_active.columns:
+            if (
+                "nomor" in str(col).lower()
+                or "register" in str(col).lower()
+                or "no" in str(col).lower()
+            ):
+                reg_col = col
+                break
 
-        # Filter baris dengan mengabaikan semua variasi spasi
-        row = data[data["Nomor_Register"].apply(clean_str) == clean_str(pilih_alat)]
+        if reg_col is None:
+            reg_col = df_active.columns[
+                1
+            ]  # Default ke Kolom B jika header tidak terdeteksi
 
-        if not row.empty:
-            row_data = row.iloc[0]
+        list_alat = df_active[reg_col].dropna().unique()
+        pilih_alat = st.selectbox("Pilih Nomor Register Alat:", list_alat)
 
-            # 2. Fungsi pencarian kolom yang fleksibel
-            def get_val(possible_headers):
-                for ph in possible_headers:
-                    target_key = clean_str(ph)
+        # Fungsi pencocokan tanpa menghiraukan spasi dan huruf besar/kecil
+        def clean_val(v):
+            return str(v).replace(" ", "").strip().lower()
+
+        # Filter baris alat
+        matched_rows = df_active[
+            df_active[reg_col].apply(clean_val) == clean_val(pilih_alat)
+        ]
+
+        if not matched_rows.empty:
+            row_data = matched_rows.iloc[0]
+
+            # Fungsi fleksibel: Cari berdasarkan nama header ATAU nomor urut kolom di Spreadsheet
+            def get_field(possible_names, col_index_fallback):
+                # 1. Cari via nama header
+                for name in possible_names:
                     for col in row_data.index:
-                        if target_key in clean_str(col):
+                        if clean_val(name) in clean_val(col):
                             val = str(row_data[col]).strip()
                             if val and val.lower() != "nan":
                                 return val
+                # 2. Fallback via nomor kolom spreadsheet (0=A, 1=B, 2=C, 3=D, dst)
+                try:
+                    val = str(row_data.iloc[col_index_fallback]).strip()
+                    if val and val.lower() != "nan":
+                        return val
+                except:
+                    pass
+                return "-"
+
+            # Ambil data alat ukur (dengan cadangan posisi kolom A-M)
+            nama_alat = get_field(["Nama_Alat", "Nama Alat"], 2)  # Kolom C
+            merk = get_field(["Merk"], 3)  # Kolom D
+            no_seri = get_field(["No_Seri", "No Seri"], 4)  # Kolom E
+            rentang = get_field(
+                ["Rentang Pemakaian", "Rentang_Pemakaian"], 6
+            )  # Kolom G
+            eq_range = get_field(
+                ["Equipment_Range", "Equipment Range"], 5
+            )  # Kolom F
+            cal_date = get_field(
+                [
+                    "Expired_Calibration",
+                    "Calibration Date",
+                    "Last_Calibration_SD",
+                    "Next Calibration",
+                ],
+                12,
+            )  # Kolom M
+
+            # Format teks stiker
+            qr_text = f"""CALIBRATION REMINDER
+----------------------------------
+Nama Alat        : {nama_alat}
+Merk             : {merk}
+No. Seri         : {no_seri}
+No. Reg          : {pilih_alat}
+Rentang Pemakaian: {rentang}
+Equipment Range  : {eq_range}
+Calibration Date : {cal_date}
+----------------------------------
+PT ARGAPURA - JIDOKA SYSTEM"""
+
+            col1, col2 = st.columns([1, 2])
+
+            with col1:
+                import qrcode
+                from io import BytesIO
+
+                qr = qrcode.make(pilih_alat)
+                buf = BytesIO()
+                qr.save(buf)
+                st.image(buf.getvalue(), caption=f"QR Code: {pilih_alat}")
+
+                st.download_button(
+                    label="Unduh QR Code (.PNG)",
+                    data=buf.getvalue(),
+                    file_name=f"QR_{pilih_alat}.png",
+                    mime="image/png",
+                )
+
+            with col2:
+                st.subheader("Informasi Barcode:")
+                st.code(qr_text, language="text")
+        else:
+            st.warning("Data detail tidak ditemukan.")
+    else:
+        st.error("Data spreadsheet kosong atau tidak terload.")
+
+
+                
                 return "-"
 
             nama_alat = get_val(["Nama_Alat", "Nama Alat"])
