@@ -505,32 +505,56 @@ elif menu == "Genchi Genbutsu (Scan QR)":
                 col3.metric("Status Monitoring", row['Status_Monitoring'])
             else:
                 st.warning("⚠️ Data alat tidak ditemukan dalam database.")
-
 elif menu == "Cetak Stiker QR Code":
     st.subheader("🖨️ Cetak Stiker QR Code Alat Ukur")
     st.write("Gunakan fitur ini untuk mengunduh stiker QR Code berformat Calibration Reminder untuk ditempel di fisik alat ukur.")
-    
-    if not data.empty:
-        pilih_alat = st.selectbox("Pilih Nomor Register Alat:", data['Nomor_Register'].unique())
-        
-        if pilih_alat:
-            # Ambil detail baris data alat yang dipilih
-            row_data = data[data['Nomor_Register'] == pilih_alat].iloc[0]
-            
+
+    if not data.empty and "Nomor_Register" in data.columns:
+        pilih_alat = st.selectbox("Pilih Nomor Register Alat:", data["Nomor_Register"].dropna().unique())
+
+        # 1. Normalkan format teks (hapus semua spasi) agar pencocokan 100% presisi
+        def clean_str(val):
+            return str(val).replace(" ", "").strip().lower()
+
+        # Filter baris dengan mengabaikan semua variasi spasi
+        row = data[data["Nomor_Register"].apply(clean_str) == clean_str(pilih_alat)]
+
+        if not row.empty:
+            row_data = row.iloc[0]
+
+            # 2. Fungsi pencarian kolom yang fleksibel
+            def get_val(possible_headers):
+                for ph in possible_headers:
+                    target_key = clean_str(ph)
+                    for col in row_data.index:
+                        if target_key in clean_str(col):
+                            val = str(row_data[col]).strip()
+                            if val and val.lower() != "nan":
+                                return val
+                return "-"
+
+            nama_alat = get_val(["Nama_Alat", "Nama Alat"])
+            merk = get_val(["Merk"])
+            no_seri = get_val(["No_Seri", "No Seri"])
+            rentang = get_val(["Rentang Pemakaian", "Rentang_Pemakaian"])
+            eq_range = get_val(["Equipment_Range", "Equipment Range"])
+            cal_date = get_val(["Expired_Calibration", "Calibration Date", "Last_Calibration_SD", "Next Calibration"])
+
             # Format teks di dalam QR Code persis seperti stiker fisik (Mitutoyo)
-            
             qr_text = f"""CALIBRATION REMINDER
-----------------------------
-Nama Alat		: {row_data.get('Nama_Alat', '-')}
-Merk			: {row_data.get('Merk', '-')}
-No. Seri		: {row_data.get('No_Seri', '-')}
-No. Reg			: {row_data.get('Nomor_Register', pilih_alat)}
-Rentang Pemakaian	: {row_data.get('Rentang Pemakaian', '-')}
-Equipment Range		: {row_data.get('Equipment_Range', '-')}
-Calibration Date	: {row_data.get('Expired_Calibration', '-')}
-----------------------------
+----------------------------------
+Nama Alat        : {nama_alat}
+Merk             : {merk}
+No. Seri         : {no_seri}
+No. Reg          : {pilih_alat}
+Rentang Pemakaian: {rentang}
+Equipment Range  : {eq_range}
+Calibration Date : {cal_date}
+----------------------------------
 PT ARGAPURA - JIDOKA SYSTEM"""
 
+
+            
             # Generate QR Code dari teks berformat stiker fisik
             qr = qrcode.QRCode(
                 version=1,
