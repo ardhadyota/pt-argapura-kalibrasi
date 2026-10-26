@@ -561,7 +561,6 @@ elif menu == "JIT & Vendor Management":
         col_j1.metric("🟢 In Use", len(data[data['Status_JIT'] == "In Use"]))
         col_j2.metric("🟡 Preparing", len(data[data['Status_JIT'] == "Preparing for Cal"]))
         col_j3.metric("🚚 Sent to Vendor", len(data[data['Status_JIT'] == "Sent to Vendor/Lab"]))
-        col_j4.metric("🔬 In Calibration", len(data[data['Status_JIT'] == "In Calibration"]))
         col_j5.metric("✅ Returned & Verified", len(data[data['Status_JIT'] == "Returned & Verified"]))
 
 elif menu == "Kaizen & 5-Why Analysis":
