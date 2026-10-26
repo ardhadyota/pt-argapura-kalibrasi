@@ -627,7 +627,7 @@ PT ARGAPURA - JIDOKA SYSTEM"""
 
 
                 
-                return "-"
+    return "-"
 
             nama_alat = get_val(["Nama_Alat", "Nama Alat"])
             merk = get_val(["Merk"])
