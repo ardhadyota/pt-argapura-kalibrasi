@@ -300,6 +300,9 @@ with st.sidebar:
         index=0
     )
     st.divider()
+    if st.button("🔄 Refresh Data / Hapus Cache", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
     
     # Status Connected Indicator
     st.markdown("""
