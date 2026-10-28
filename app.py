@@ -10,11 +10,14 @@ from streamlit_qrcode_scanner import qrcode_scanner
 # ---------------------------------------------------------
 # 1. KONFIGURASI HALAMAN & LAYOUT UTAMA
 # ---------------------------------------------------------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+icon_path = os.path.join(BASE_DIR, "logo_argapura.png")
+
 st.set_page_config(
     page_title="PT ARGAPURA - Jidoka Calibration System",
-    page_icon="🏭",
+    page_icon=icon_path if os.path.exists(icon_path) else "logo_argapura.png",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
 # ---------------------------------------------------------
