@@ -694,7 +694,7 @@ No. Seri		: {no_seri}
 No. Reg			: {pilih_alat}
 Rentang Pemakaian	: {rentang}
 Equipment Range		: {eq_range}
-Calibration Date	: {cal_date}
+Next Calibration	: {cal_date}
 ----------------------------
 PT ARGAPURA - JIDOKA SYSTEM"""
 
