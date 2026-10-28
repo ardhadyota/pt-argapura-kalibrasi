@@ -721,27 +721,20 @@ PT ARGAPURA - JIDOKA SYSTEM"""
 # MENU 4: JIT & VENDOR MANAGEMENT
 # ---------------------------------------------------------
 elif menu == "JIT & Vendor Management":
-  st.subheader("Just-In-Time (JIT) Tracking & Vendor Lead Time")
-  if not data.empty:
-    if "Status_JIT" not in data.columns:
-      data["Status_JIT"] = "In Use"
-
-    col_j1, col_j2, col_j3, col_j4, col_j5 = st.columns(5)
-    col_j1.metric("🟢 In Use", len(data[data["Status_JIT"] == "In Use"]))
-    col_j2.metric(
-        "🟡 Preparing", len(data[data["Status_JIT"] == "Preparing for Cal"])
-    )
-    col_j3.metric(
-        "🚚 Sent to Vendor",
-        len(data[data["Status_JIT"] == "Sent to Vendor/Lab"]),
-    )
-    col_j4.metric(
-        "🔬 In Calibration", len(data[data["Status_JIT"] == "In Calibration"])
-    )
-    col_j5.metric(
-        "✅ Returned & Verified",
-        len(data[data["Status_JIT"] == "Returned & Verified"]),
-    )
+    st.subheader("Just-In-Time (JIT) Tracking & Vendor Lead Time")
+    if not data.empty:
+        if 'Status_JIT' not in data.columns:
+            data['Status_JIT'] = "In Use"
+            
+        # Hitung gabungan status Sent to Vendor dan In Calibration
+        count_sent_or_cal = len(data[data['Status_JIT'].isin(["Sent to Vendor/Lab", "In Calibration", "Sent to Vendor"])])
+        
+        # Tampilkan 4 kolom metric
+        col_j1, col_j2, col_j3, col_j4 = st.columns(4)
+        col_j1.metric("🟢 In Use", len(data[data['Status_JIT'] == "In Use"]))
+        col_j2.metric("🟡 Preparing", len(data[data['Status_JIT'] == "Preparing for Cal"]))
+        col_j3.metric("🚚 Sent to Vendor / In Calibration", count_sent_or_cal)
+        col_j4.metric("✅ Returned & Verified", len(data[data['Status_JIT'] == "Returned & Verified"]))
 
 # ---------------------------------------------------------
 # MENU 5: KAIZEN & 5-WHY ANALYSIS
