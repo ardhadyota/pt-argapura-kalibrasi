@@ -541,7 +541,7 @@ if menu == "Dashboard Monitoring":
             list(data[loc_col].dropna().unique())
         )
         pilih_line = st.selectbox(
-            "🏭 Pilih Line / Lokasi Alat Ukur:", daftar_line
+            "Pilih Line / Lokasi Alat Ukur:", daftar_line
         )
       else:
         pilih_line = "Semua Line / Lokasi"
