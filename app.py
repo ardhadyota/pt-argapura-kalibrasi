@@ -622,39 +622,97 @@ if menu == "Dashboard Monitoring":
 
 
 # ---------------------------------------------------------
-# MENU 2: GENCHI GENBUTSU (SCAN QR)
+# MENU 2: GENCHI GENBUTSU (REAL-TIME SCANNER LOOKUP)
 # ---------------------------------------------------------
 elif menu == "Genchi Genbutsu (Scan QR)":
-  st.subheader("Genchi Genbutsu (Gemba Walk & Mobile Inspection)")
-  st.info("Arahkan kamera HP ke stiker QR Code yang tertempel di fisik alat ukur.")
+  st.subheader("📱 Genchi Genbutsu (Gemba Walk & Mobile Inspection)")
+  st.info(
+      "💡 Arahkan kamera ke stiker QR Code permanen alat ukur. Sistem akan"
+      " membaca ID Register dan langsung menampilkan informasi status terbaru"
+      " dari Google Sheets."
+  )
 
   qr_code_val = qrcode_scanner(key="gemba_scanner_pro")
+
   if qr_code_val:
     st.success(f"✅ QR Code Terdeteksi: **{qr_code_val}**")
+
     if not data.empty:
+      # Cari baris data di spreadsheet berdasarkan Nomor Register hasil scan
       matched = data[
           data["Nomor_Register"].apply(clean_key) == clean_key(qr_code_val)
       ]
+
       if not matched.empty:
         row = matched.iloc[0]
-        nama_alat_val = get_field_val(row, ["Nama_Alat", "Nama Alat"], 2)
+
+        # Ambil nilai paling mutakhir dari Google Sheets
+        nama_alat = get_field_val(row, ["Nama_Alat", "Nama Alat"], 2)
+        merk = get_field_val(row, ["Merk"], 3)
+        no_seri = get_field_val(row, ["No_Seri", "No Seri"], 4)
+        eq_range = get_field_val(
+            row, ["Equipment_Range", "Equipment Range"], 5
+        )
+        rentang = get_field_val(
+            row, ["Rentang Pemakaian", "Rentang_Pemakaian"], 6
+        )
+        cal_date = get_field_val(
+            row,
+            [
+                "Expired_Calibration",
+                "Calibration Date",
+                "Last_Calibration_SD",
+                "Next Calibration",
+            ],
+            12,
+        )
+
+        # Susun blok informasi real-time
+        realtime_info = f"""CALIBRATION REMINDER (REAL-TIME DATA)
+----------------------------
+Nama Alat           : {nama_alat}
+Merk                : {merk}
+No. Seri            : {no_seri}
+No. Reg (Payload)   : {row['Nomor_Register']}
+Rentang Pemakaian   : {rentang}
+Equipment Range     : {eq_range}
+Next Calibration    : {cal_date}
+----------------------------
+PT ARGAPURA - JIDOKA SYSTEM"""
+
         st.markdown("---")
-        st.subheader(f"📌 Detail Alat: {nama_alat_val}")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Nomor Register", row["Nomor_Register"])
-        col2.metric("Expired Date", row["Expired_Calibration"])
-        col3.metric("Status Monitoring", row["Status_Monitoring"])
+        st.subheader("📌 Informasi Real-Time Hasil Scan:")
+
+        # Tampilkan kotak teks informasi
+        st.code(realtime_info, language="text")
+
+        # Visualisasi Status Peringatan Warna
+        status_val = row.get("Status_Monitoring", "OK (Safe)")
+        st.markdown("**Status Validasi Alat:**")
+        if "EXPIRED" in str(status_val).upper():
+          st.error(f"🔴 STATUS: {status_val} — DILARANG DIGUNAKAN!")
+        elif "WARNING" in str(status_val).upper():
+          st.warning(f"🟡 STATUS: {status_val} — SEGERA JADWALKAN KALIBRASI!")
+        else:
+          st.success(f"🟢 STATUS: {status_val} — SAFE / VALID")
+
       else:
-        st.warning("⚠️ Data alat tidak ditemukan dalam database.")
+        st.warning(
+            f"⚠️ Data untuk Nomor Register '{qr_code_val}' tidak ditemukan"
+            " dalam database spreadsheet."
+        )
+    else:
+      st.error("Data spreadsheet kosong. Klik tombol Refresh Data di sidebar.")
 
 # ---------------------------------------------------------
-# MENU 3: CETAK STIKER QR CODE (100% SESUAI SPREADSHEET)
+# MENU 3: CETAK STIKER QR CODE PERMANEN (DOMAINS / LINK URL)
 # ---------------------------------------------------------
 elif menu == "Cetak Stiker QR Code":
-  st.subheader("🖨️ Cetak Stiker QR Code Alat Ukur")
-  st.write(
-      "Gunakan fitur ini untuk mengunduh stiker QR Code berformat Calibration"
-      " Reminder untuk ditempel di fisik alat ukur."
+  st.subheader("🖨️ Cetak Stiker QR Code Permanen Alat Ukur")
+  st.info(
+      "💡 **Sistem QR Code Link URL**: QR Code ini menyimpan URL web."
+      " Saat di-scan dengan **Kamera HP Biasa**, browser HP akan otomatis"
+      " membuka web Streamlit dan menampilkan data real-time terbaru!"
   )
 
   if not data.empty and "Nomor_Register" in data.columns:
@@ -668,16 +726,16 @@ elif menu == "Cetak Stiker QR Code":
       if not matched.empty:
         row_data = matched.iloc[0]
 
-        # Pembacaan Nilai Menggunakan Header & Indeks Kolom Spreadsheet (A-M)
-        nama_alat = get_field_val(row_data, ["Nama_Alat", "Nama Alat"], 2)  # C
-        merk = get_field_val(row_data, ["Merk"], 3)  # D
-        no_seri = get_field_val(row_data, ["No_Seri", "No Seri"], 4)  # E
+        # 1. Ambil Data Real-Time dari Spreadsheet untuk Tampilan Pratinjau
+        nama_alat = get_field_val(row_data, ["Nama_Alat", "Nama Alat"], 2)
+        merk = get_field_val(row_data, ["Merk"], 3)
+        no_seri = get_field_val(row_data, ["No_Seri", "No Seri"], 4)
         eq_range = get_field_val(
             row_data, ["Equipment_Range", "Equipment Range"], 5
-        )  # F
+        )
         rentang = get_field_val(
             row_data, ["Rentang Pemakaian", "Rentang_Pemakaian"], 6
-        )  # G
+        )
         cal_date = get_field_val(
             row_data,
             [
@@ -687,38 +745,77 @@ elif menu == "Cetak Stiker QR Code":
                 "Next Calibration",
             ],
             12,
-        )  # M
+        )
 
-        qr_text = f"""CALIBRATION REMINDER
+        # -----------------------------------------------------------------
+        # STEP 3: KODE DITEMPEL DI SINI (PAYLOAD BERISI LINK URL WEB)
+        # -----------------------------------------------------------------
+        # Ganti domain URL ini sesuai dengan alamat web Streamlit PT ARGAPURA Anda
+        URL_WEB_ARGAPURA = "https://argapura-calibration.streamlit.app"
+
+        # Tautan URL dengan query parameter ?reg=
+        qr_payload_permanen = (
+            f"{URL_WEB_ARGAPURA}/?reg={pilih_alat.strip().replace(' ', '%20')}"
+        )
+        # -----------------------------------------------------------------
+
+        # 2. Format Teks Real-Time untuk Pratinjau Layar Web
+        display_text = f"""CALIBRATION REMINDER (REAL-TIME DATA)
 ----------------------------
-Nama Alat		: {nama_alat}
-Merk			: {merk}
-No. Seri		: {no_seri}
-No. Reg			: {pilih_alat}
-Rentang Pemakaian	: {rentang}
-Equipment Range		: {eq_range}
-Next Calibration	: {cal_date}
+Nama Alat           : {nama_alat}
+Merk                : {merk}
+No. Seri            : {no_seri}
+No. Reg (Payload)   : {pilih_alat}
+Rentang Pemakaian   : {rentang}
+Equipment Range     : {eq_range}
+Next Calibration    : {cal_date}
 ----------------------------
 PT ARGAPURA - JIDOKA SYSTEM"""
 
-        qr_bytes = generate_qr(qr_text)
+        # Generate gambar QR Code berbasis LINK URL
+        qr_bytes = generate_qr(qr_payload_permanen)
 
         col_img, col_btn = st.columns([1, 2])
         with col_img:
-          st.image(qr_bytes, caption=f"QR Code: {pilih_alat}", width=180)
+          st.image(
+              qr_bytes, caption=f"QR Code Permanen: {pilih_alat}", width=180
+          )
         with col_btn:
-          st.markdown("**Informasi Barcode:**")
-          st.code(qr_text, language="text")
+          st.markdown("**Informasi Real-Time Saat Ini:**")
+          st.code(display_text, language="text")
+          st.caption(f"🔗 Payload Link QR: `{qr_payload_permanen}`")
           st.download_button(
-              "Unduh QR Code (.PNG)",
+              "Unduh Stiker QR Code Permanen (.PNG)",
               qr_bytes,
-              file_name=f"QR_{pilih_alat}.png",
+              file_name=f"QR_URL_{pilih_alat.replace('/', '_')}.png",
               mime="image/png",
           )
       else:
         st.warning("⚠️ Detail data untuk register ini tidak ditemukan.")
   else:
     st.error("Data spreadsheet kosong atau tidak terload.")
+
+# ---------------------------------------------------------
+# PEMBACAAN OTOMATIS SAAT DI-SCAN DARI KAMERA HP BIASA
+# ---------------------------------------------------------
+query_params = st.query_params
+if "reg" in query_params:
+  reg_from_url = query_params["reg"]
+  st.success(f"📱 Hasil Scan Kamera HP untuk Register: **{reg_from_url}**")
+
+  if "data" in locals() and not data.empty:
+    matched_url = data[
+        data["Nomor_Register"].apply(clean_key) == clean_key(reg_from_url)
+    ]
+    if not matched_url.empty:
+      row = matched_url.iloc[0]
+      st.info(
+          f"📌 **Nama Alat**: {row.get('Nama_Alat', '-')}\n\n"
+          f"📅 **Next Calibration**:"
+          f" {get_field_val(row, ['Expired_Calibration', 'Next Calibration'], 12)}\n\n"
+          f"🟢 **Status**:"
+          f" {row.get('Status_Monitoring', 'SAFE/VALID')}"
+      )
 
 # ---------------------------------------------------------
 # MENU 4: JIT & VENDOR MANAGEMENT
