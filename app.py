@@ -648,65 +648,77 @@ elif menu == "Genchi Genbutsu (Scan QR)":
         st.warning("⚠️ Data alat tidak ditemukan dalam database.")
 
 # ---------------------------------------------------------
-# MENU 3: CETAK STIKER QR CODE (DYNAMIC PERMANENT BARCODE)
+# MENU 3: CETAK STIKER QR CODE (100% SESUAI SPREADSHEET)
 # ---------------------------------------------------------
 elif menu == "Cetak Stiker QR Code":
-    st.subheader("🖨️ Cetak Stiker QR Code Permanen Alat Ukur")
-    st.info("💡 **Konsep QR Code Permanen**: QR Code ini hanya memuat ID unik (Nomor Register). Stiker cukup ditempel sekali pada alat. Informasi detail & tanggal kalibrasi akan selalu ter-update secara real-time dari sistem/spreadsheet tanpa perlu mengganti stiker fisik.")
+  st.subheader("🖨️ Cetak Stiker QR Code Alat Ukur")
+  st.write(
+      "Gunakan fitur ini untuk mengunduh stiker QR Code berformat Calibration"
+      " Reminder untuk ditempel di fisik alat ukur."
+  )
 
-    if not data.empty and "Nomor_Register" in data.columns:
-        list_register = data["Nomor_Register"].dropna().unique()
-        pilih_alat = st.selectbox("Pilih Nomor Register Alat:", list_register)
+  if not data.empty and "Nomor_Register" in data.columns:
+    list_register = data["Nomor_Register"].dropna().unique()
+    pilih_alat = st.selectbox("Pilih Nomor Register Alat:", list_register)
 
-        if pilih_alat:
-            matched = data[data["Nomor_Register"].apply(clean_key) == clean_key(pilih_alat)]
-            if not matched.empty:
-                row_data = matched.iloc[0]
+    if pilih_alat:
+      matched = data[
+          data["Nomor_Register"].apply(clean_key) == clean_key(pilih_alat)
+      ]
+      if not matched.empty:
+        row_data = matched.iloc[0]
 
-                # 1. Pembacaan Data Real-Time dari Spreadsheet
-                nama_alat = get_field_val(row_data, ["Nama_Alat", "Nama Alat"], 2)
-                merk = get_field_val(row_data, ["Merk"], 3)
-                no_seri = get_field_val(row_data, ["No_Seri", "No Seri"], 4)
-                eq_range = get_field_val(row_data, ["Equipment_Range", "Equipment Range"], 5)
-                rentang = get_field_val(row_data, ["Rentang Pemakaian", "Rentang_Pemakaian"], 6)
-                cal_date = get_field_val(row_data, ["Expired_Calibration", "Calibration Date", "Last_Calibration_SD", "Next Calibration"], 12)
+        # Pembacaan Nilai Menggunakan Header & Indeks Kolom Spreadsheet (A-M)
+        nama_alat = get_field_val(row_data, ["Nama_Alat", "Nama Alat"], 2)  # C
+        merk = get_field_val(row_data, ["Merk"], 3)  # D
+        no_seri = get_field_val(row_data, ["No_Seri", "No Seri"], 4)  # E
+        eq_range = get_field_val(
+            row_data, ["Equipment_Range", "Equipment Range"], 5
+        )  # F
+        rentang = get_field_val(
+            row_data, ["Rentang Pemakaian", "Rentang_Pemakaian"], 6
+        )  # G
+        cal_date = get_field_val(
+            row_data,
+            [
+                "Expired_Calibration",
+                "Calibration Date",
+                "Last_Calibration_SD",
+                "Next Calibration",
+            ],
+            12,
+        )  # M
 
-                # 2. ISI QR CODE PERMANEN (HANYA NOMOR REGISTER)
-                # Saat di-scan, sistem hanya membaca ID ini untuk query ke database real-time
-                qr_permanent_payload = pilih_alat
-
-                # 3. Teks Informasi Tampilan Web (Real-Time)
-                display_text = f"""CALIBRATION REMINDER (REAL-TIME DATA)
+        qr_text = f"""CALIBRATION REMINDER
 ----------------------------
-Nama Alat           : {nama_alat}
-Merk                : {merk}
-No. Seri            : {no_seri}
-No. Reg (Payload)   : {pilih_alat}
-Rentang Pemakaian   : {rentang}
-Equipment Range     : {eq_range}
-Next Calibration    : {cal_date}
+Nama Alat		: {nama_alat}
+Merk			: {merk}
+No. Seri		: {no_seri}
+No. Reg			: {pilih_alat}
+Rentang Pemakaian	: {rentang}
+Equipment Range		: {eq_range}
+Next Calibration	: {cal_date}
 ----------------------------
 PT ARGAPURA - JIDOKA SYSTEM"""
 
-                # Generate QR Code permanen
-                qr_bytes = generate_qr(qr_permanent_payload)
+        qr_bytes = generate_qr(qr_text)
 
-                col_img, col_btn = st.columns([1, 2])
-                with col_img:
-                    st.image(qr_bytes, caption=f"QR Code Permanen: {pilih_alat}", width=180)
-                with col_btn:
-                    st.markdown("**Informasi Real-Time Hasil Scan:**")
-                    st.code(display_text, language="text")
-                    st.download_button(
-                        "Unduh Stiker QR Code Permanen (.PNG)",
-                        qr_bytes,
-                        file_name=f"QR_PERMANENT_{pilih_alat.replace('/', '_')}.png",
-                        mime="image/png",
-                    )
-            else:
-                st.warning("⚠️ Detail data untuk register ini tidak ditemukan.")
-    else:
-        st.error("Data spreadsheet kosong atau tidak terload.")
+        col_img, col_btn = st.columns([1, 2])
+        with col_img:
+          st.image(qr_bytes, caption=f"QR Code: {pilih_alat}", width=180)
+        with col_btn:
+          st.markdown("**Informasi Barcode:**")
+          st.code(qr_text, language="text")
+          st.download_button(
+              "Unduh QR Code (.PNG)",
+              qr_bytes,
+              file_name=f"QR_{pilih_alat}.png",
+              mime="image/png",
+          )
+      else:
+        st.warning("⚠️ Detail data untuk register ini tidak ditemukan.")
+  else:
+    st.error("Data spreadsheet kosong atau tidak terload.")
 
 # ---------------------------------------------------------
 # MENU 4: JIT & VENDOR MANAGEMENT
